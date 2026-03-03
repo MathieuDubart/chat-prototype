@@ -13,27 +13,26 @@ import Observation
 @MainActor
 final class ChatManager {
     var messages: [Message] = []
+    private var listeningTask: Task<Void, Never>?
     
-    // 1. Récupérer l'historique
     func fetchHistory() async {
         do {
-            let fetchedMessages: [Message] = try await supabase
+            self.messages = try await supabase
                 .from("messages")
                 .select()
                 .order("created_at", ascending: true)
                 .limit(50)
                 .execute()
                 .value
-            
-            self.messages = fetchedMessages
         } catch {
             print("Erreur historique : \(error)")
         }
     }
     
-    func sendMessage(content: String, userId: UUID) async {
+    func sendMessage(content: String, userId: UUID, email: String) async {
         let payload = [
             "user_id": userId.uuidString,
+            "sender_email": email,
             "content": content
         ]
         
@@ -44,29 +43,38 @@ final class ChatManager {
         }
     }
     
-    func startListening() async {
-        let channel = supabase.channel("public:messages")
+    func startListening() {
+        listeningTask?.cancel()
         
-        let insertions = channel.postgresChange(
-            InsertAction.self,
-            schema: "public",
-            table: "messages"
-        )
-        
-        do {
-            try await channel.subscribeWithError()
-        } catch {
-            print("Erreur subscription : \(error)")
-            return
-        }
-        
-        for await insert in insertions {
+        listeningTask = Task {
+            let channel = supabase.channel("public:messages")
+            
+            let insertions = channel.postgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "messages"
+            )
+            
             do {
-                let newMessage = try insert.record.decode(as: Message.self)
-                self.messages.append(newMessage)
+                try await channel.subscribeWithError()
             } catch {
-                print("Erreur décodage realtime : \(error)")
+                print("Erreur subscription : \(error)")
+                return
+            }
+            
+            for await insert in insertions {
+                do {
+                    let newMessage = try insert.record.decode(as: Message.self)
+                    self.messages.append(newMessage)
+                } catch {
+                    print("Erreur décodage realtime : \(error)")
+                }
             }
         }
+    }
+    
+    func stopListening() {
+        listeningTask?.cancel()
+        listeningTask = nil
     }
 }
