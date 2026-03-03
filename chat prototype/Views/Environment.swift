@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Environment {
+enum AppEnvironment {
     static let supabaseURL: URL = {
         guard let urlString = Bundle.main.object(forInfoDictionaryKey: "SupabaseURL") as? String,
               let url = URL(string: urlString) else {

@@ -6,27 +6,46 @@
 //
 
 import SwiftUI
-import Supabase
+
+import SwiftUI
 
 struct ContentView: View {
-    
-    @State var instruments: [Instrument] = []
+    @State private var authManager = AuthManager()
+    @State private var isLoginMode = true
     
     var body: some View {
-        List(instruments) { instrument in
-            Text(instrument.name)
-        }
-        .overlay {
-            if instruments.isEmpty {
-                ProgressView()
+        Group {
+            if authManager.isAuthenticated {
+                MainTabView()
+            } else {
+                VStack {
+                    if isLoginMode {
+                        LoginView()
+                    } else {
+                        SignUpView()
+                    }
+                    
+                    Divider()
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                    
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isLoginMode.toggle()
+                        }
+                    }) {
+                        Text(isLoginMode ? "Pas de compte ? Inscris-toi" : "Déjà un compte ? Connecte-toi")
+                            .font(.footnote)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                    }
+                    .padding(.bottom, 20)
+                }
             }
         }
+        .environment(authManager)
         .task {
-            do {
-                instruments = try await supabase.from("instruments").select().execute().value
-            } catch {
-                dump(error)
-            }
+            authManager.startListening()
         }
     }
 }
