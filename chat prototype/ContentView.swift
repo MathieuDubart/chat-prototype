@@ -6,16 +6,28 @@
 //
 
 import SwiftUI
+import Supabase
 
 struct ContentView: View {
+    
+    @State var instruments: [Instrument] = []
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        List(instruments) { instrument in
+            Text(instrument.name)
         }
-        .padding()
+        .overlay {
+            if instruments.isEmpty {
+                ProgressView()
+            }
+        }
+        .task {
+            do {
+                instruments = try await supabase.from("instruments").select().execute().value
+            } catch {
+                dump(error)
+            }
+        }
     }
 }
 

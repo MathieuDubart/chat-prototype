@@ -9,6 +9,6 @@ import Supabase
 import Foundation
 
 let supabase = SupabaseClient(
-    supabaseURL: URL(string: "Yhttps://zdyhaqmggoztwtlqhhma.supabase.co")!,
-    supabaseKey: "sb_publishable_ghqr60ROBbfa5BNma3VLzw_0WcsCGvv"
+    supabaseURL: Environment.supabaseURL,
+    supabaseKey: Environment.supabaseAnonKey
 )
